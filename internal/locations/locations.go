@@ -9,12 +9,12 @@ package locations
 // - iterate through the result list and print
 import (
 	"encoding/json"
+	"fmt"
 	"io"
-	"log"
 	"net/http"
 )
 
-type CurrentPage struct {
+type LocationPage struct {
 	Previous string
 	Next     string
 	Results  []location
@@ -25,7 +25,7 @@ type location struct {
 	url  string
 }
 
-func get_locations(c CurrentPage, arg string) (cp CurrentPage) {
+func GetLocations(p *LocationPage, arg string) (*LocationPage, error) {
 	// call GET here
 	// if arg == "map" {
 	// 	arg = c.next
@@ -34,35 +34,35 @@ func get_locations(c CurrentPage, arg string) (cp CurrentPage) {
 	// } else {
 	// 	log.Fatal("Not valid arg.")
 	// }
+	zeroLocationPage := LocationPage{}
 
 	switch arg {
 	case "map":
-		arg = c.Next
+		arg = p.Next
 	case "bmap":
-		arg = c.Previous
+		arg = p.Previous
 	default:
-		log.Fatal("Not valid arg")
+		return p, nil
 
 	}
 	res, err := http.Get(arg)
 	if err != nil {
-		log.Fatal(err)
+		return &zeroLocationPage, err
 	}
 
 	body, err := io.ReadAll(res.Body)
 	defer res.Body.Close()
 	if res.StatusCode > 299 {
-		log.Fatalf("Failed with status code %d and\nbody: %s\n", res.StatusCode, body)
+		return &zeroLocationPage, fmt.Errorf("failed with status code %d and\nbody: %s", res.StatusCode, body)
 	}
 
 	if err != nil {
-		log.Fatal(err)
+		return &zeroLocationPage, err
 	}
 
-	cp = CurrentPage{}
-	err = json.Unmarshal(body, &cp)
+	err = json.Unmarshal(body, p)
 	if err != nil {
-		log.Fatal(err)
+		return &zeroLocationPage, err
 	}
-	return
+	return p, nil
 }

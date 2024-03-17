@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-  "github.com/ammon134/pokedexcli/internal/locations"
+	"github.com/ammon134/pokedexcli/internal/locations"
 )
 
 type CliCommand struct {
@@ -28,12 +28,12 @@ func GetCommands() map[string]CliCommand {
 		"map": {
 			Name:        "map",
 			Description: "Display the next 20 locations.",
-			Callback:    cmd_exit,
+			Callback:    cmd_map,
 		},
 		"bmap": {
 			Name:        "bmap",
 			Description: "Display the previous 20 locations.",
-			Callback:    cmd_exit,
+			Callback:    cmd_mapb,
 		},
 	}
 }
@@ -54,13 +54,17 @@ func cmd_exit() error {
 }
 
 func cmd_map() error {
-	// Init the currentPage struct here
-  cp := locations.CurrentPage{}
+	// Where do I keep the currentPage?
+	cp := locations.LocationPage{}
+	locations.GetLocations(&cp, "map")
+
 	return nil
 }
 
 func cmd_mapb() error {
 	// Check if the currentPage struct is init or not,
 	// if not throw the same error as is on the first page
+	// Where do I keep the current page?
+
 	return nil
 }
