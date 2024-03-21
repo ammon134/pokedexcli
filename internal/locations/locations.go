@@ -14,18 +14,22 @@ import (
 	"net/http"
 )
 
-type LocationPage struct {
+const (
+	baseURL = "https://pokeapi.co/api/v2"
+)
+
+type LocationResult struct {
 	Previous string
 	Next     string
 	Results  []location
 }
 
 type location struct {
-	name string
-	url  string
+	Name string
+	Url  string
 }
 
-func GetLocations(p *LocationPage, arg string) (*LocationPage, error) {
+func GetLocations(url *string) (*LocationResult, error) {
 	// call GET here
 	// if arg == "map" {
 	// 	arg = c.next
@@ -34,35 +38,30 @@ func GetLocations(p *LocationPage, arg string) (*LocationPage, error) {
 	// } else {
 	// 	log.Fatal("Not valid arg.")
 	// }
-	zeroLocationPage := LocationPage{}
-
-	switch arg {
-	case "map":
-		arg = p.Next
-	case "bmap":
-		arg = p.Previous
-	default:
-		return p, nil
-
+	locationRes := LocationResult{}
+	getURL := baseURL + "/location-area"
+	if url != nil {
+		getURL = *url
 	}
-	res, err := http.Get(arg)
+
+	res, err := http.Get(getURL)
 	if err != nil {
-		return &zeroLocationPage, err
+		return &locationRes, err
 	}
 
 	body, err := io.ReadAll(res.Body)
 	defer res.Body.Close()
 	if res.StatusCode > 299 {
-		return &zeroLocationPage, fmt.Errorf("failed with status code %d and\nbody: %s", res.StatusCode, body)
+		return &locationRes, fmt.Errorf("failed with status code %d and\nbody: %s", res.StatusCode, body)
 	}
 
 	if err != nil {
-		return &zeroLocationPage, err
+		return &locationRes, err
 	}
 
-	err = json.Unmarshal(body, p)
+	err = json.Unmarshal(body, &locationRes)
 	if err != nil {
-		return &zeroLocationPage, err
+		return &locationRes, err
 	}
-	return p, nil
+	return &locationRes, nil
 }
