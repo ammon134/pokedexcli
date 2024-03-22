@@ -12,6 +12,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+
+	"github.com/ammon134/pokedexcli/internal/pokecache"
 )
 
 const (
@@ -29,39 +31,45 @@ type location struct {
 	Url  string
 }
 
-func GetLocations(url *string) (*LocationResult, error) {
-	// call GET here
-	// if arg == "map" {
-	// 	arg = c.next
-	// } else if arg == "bmap" {
-	// 	arg = c.previous
-	// } else {
-	// 	log.Fatal("Not valid arg.")
-	// }
-	locationRes := LocationResult{}
-	getURL := baseURL + "/location-area"
+func GetLocations(url *string, cache pokecache.Cache) (*LocationResult, error) {
+	locationRes := &LocationResult{}
+	getURL := baseURL + "/location-area?offset=0&limit=20"
 	if url != nil {
 		getURL = *url
 	}
 
+	if cacheEntry, ok := cache.CacheMap[getURL]; ok {
+		// fmt.Println("cache hit")
+		err := json.Unmarshal(cacheEntry.Val, locationRes)
+		if err != nil {
+			return locationRes, err
+		}
+	}
+
 	res, err := http.Get(getURL)
 	if err != nil {
-		return &locationRes, err
+		return locationRes, err
 	}
 
 	body, err := io.ReadAll(res.Body)
 	defer res.Body.Close()
 	if res.StatusCode > 299 {
-		return &locationRes, fmt.Errorf("failed with status code %d and\nbody: %s", res.StatusCode, body)
+		return locationRes, fmt.Errorf("failed with status code %d and\nbody: %s", res.StatusCode, body)
 	}
 
 	if err != nil {
-		return &locationRes, err
+		return locationRes, err
 	}
 
-	err = json.Unmarshal(body, &locationRes)
+	err = cache.Add(getURL, body)
 	if err != nil {
-		return &locationRes, err
+		return locationRes, err
 	}
-	return &locationRes, nil
+
+	err = json.Unmarshal(body, locationRes)
+	if err != nil {
+		return locationRes, err
+	}
+
+	return locationRes, nil
 }

@@ -8,11 +8,13 @@ import (
 	"strings"
 
 	"github.com/ammon134/pokedexcli/internal/locations"
+	"github.com/ammon134/pokedexcli/internal/pokecache"
 )
 
 type cmdArg struct {
 	nextLocations *string
 	prevLocations *string
+	cache         pokecache.Cache
 }
 
 type cliCommand struct {
@@ -32,7 +34,7 @@ func startRepl(ca *cmdArg) {
 		}
 
 		input := scanner.Text()
-		command_list := strings.Fields(input)
+		command_list := strings.Fields(strings.ToLower(input))
 		if len(command_list) == 0 {
 			continue
 		}
@@ -91,7 +93,7 @@ func cmdExit(ca *cmdArg) error {
 }
 
 func cmdMap(ca *cmdArg) error {
-	locationRes, err := locations.GetLocations(ca.nextLocations)
+	locationRes, err := locations.GetLocations(ca.nextLocations, ca.cache)
 	if err != nil {
 		return errors.New("error getting locations")
 	}
@@ -99,15 +101,11 @@ func cmdMap(ca *cmdArg) error {
 	ca.nextLocations = &locationRes.Next
 	ca.prevLocations = &locationRes.Previous
 
-	// On the "last" page, calling next will return
-	// null for next
-	if ca.nextLocations == nil {
-		return errors.New("no next map locations")
-	}
-
+	fmt.Println("---")
 	for _, location := range locationRes.Results {
 		fmt.Printf("%s\n", location.Name)
 	}
+	fmt.Println("---")
 
 	return nil
 }
@@ -117,7 +115,7 @@ func cmdMapB(ca *cmdArg) error {
 	if ca.prevLocations == nil || *ca.prevLocations == "" {
 		return errors.New("no previous map locations")
 	}
-	locationRes, err := locations.GetLocations(ca.prevLocations)
+	locationRes, err := locations.GetLocations(ca.prevLocations, ca.cache)
 	if err != nil {
 		return errors.New("error getting locations")
 	}
@@ -125,9 +123,11 @@ func cmdMapB(ca *cmdArg) error {
 	ca.nextLocations = &locationRes.Next
 	ca.prevLocations = &locationRes.Previous
 
+	fmt.Println("---")
 	for _, location := range locationRes.Results {
 		fmt.Printf("%s\n", location.Name)
 	}
+	fmt.Println("---")
 
 	return nil
 }
