@@ -38,7 +38,10 @@ type LocationDetailResult struct {
 		} `json:"language"`
 	} `json:"names"`
 	PokemonEncounters []struct {
-		Pokemon        Pokemon `json:"pokemon"`
+		Pokemon struct {
+			Name string `json:"name"`
+			URL  string `json:"url"`
+		} `json:"pokemon"`
 		VersionDetails []struct {
 			Version struct {
 				Name string `json:"name"`
@@ -57,9 +60,4 @@ type LocationDetailResult struct {
 			} `json:"encounter_details"`
 		} `json:"version_details"`
 	} `json:"pokemon_encounters"`
-}
-
-type Pokemon struct {
-	Name string `json:"name"`
-	URL  string `json:"url"`
 }

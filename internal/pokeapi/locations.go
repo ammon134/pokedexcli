@@ -26,6 +26,8 @@ func GetLocations(url *string, cache pokecache.Cache) (*LocationListResult, erro
 		if err != nil {
 			return locationRes, err
 		}
+
+		return locationRes, nil
 	}
 
 	res, err := http.Get(getURL)
@@ -63,6 +65,8 @@ func GetLocationDetail(location string, cache pokecache.Cache) (*LocationDetailR
 		if err != nil {
 			return nil, err
 		}
+
+		return lDRes, nil
 	}
 
 	res, err := http.Get(url)

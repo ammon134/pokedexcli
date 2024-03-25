@@ -11,19 +11,21 @@ import (
 	"github.com/ammon134/pokedexcli/internal/pokecache"
 )
 
-type cmdArg struct {
+// TODO: take pokedex out of cliState
+type cliState struct {
 	nextLocations *string
 	prevLocations *string
 	cache         pokecache.Cache
+	pokedex       pokeapi.Pokedex
 }
 
 type cliCommand struct {
-	callback    func(ca *cmdArg, args []string) error
+	callback    func(args []string, cs *cliState) error
 	name        string
 	description string
 }
 
-func startRepl(ca *cmdArg) {
+func startRepl(cs *cliState) {
 	scanner := bufio.NewScanner(os.Stdin)
 	cmd_map := getCommands()
 	for {
@@ -46,7 +48,7 @@ func startRepl(ca *cmdArg) {
 		}
 		args := command_list[1:]
 
-		err := command.callback(ca, args)
+		err := command.callback(args, cs)
 		if err != nil {
 			fmt.Printf("%v\n", err)
 		}
@@ -80,10 +82,15 @@ func getCommands() map[string]cliCommand {
 			description: "Show the pokemon in the provided location.",
 			callback:    cmdExplore,
 		},
+		"catch": {
+			name:        "catch",
+			description: "Attempt to catch the pokemon with provided name.",
+			callback:    cmdCatch,
+		},
 	}
 }
 
-func cmdHelp(ca *cmdArg, args []string) error {
+func cmdHelp(args []string, cs *cliState) error {
 	fmt.Println("Welcome to the Pokedex CLI!")
 	fmt.Println("Usage: ")
 	fmt.Println()
@@ -93,19 +100,19 @@ func cmdHelp(ca *cmdArg, args []string) error {
 	return nil
 }
 
-func cmdExit(ca *cmdArg, args []string) error {
+func cmdExit(args []string, cs *cliState) error {
 	os.Exit(0)
 	return nil
 }
 
-func cmdMap(ca *cmdArg, args []string) error {
-	locationRes, err := pokeapi.GetLocations(ca.nextLocations, ca.cache)
+func cmdMap(args []string, cs *cliState) error {
+	locationRes, err := pokeapi.GetLocations(cs.nextLocations, cs.cache)
 	if err != nil {
 		return errors.New("error getting locations")
 	}
 
-	ca.nextLocations = &locationRes.Next
-	ca.prevLocations = &locationRes.Previous
+	cs.nextLocations = &locationRes.Next
+	cs.prevLocations = &locationRes.Previous
 
 	fmt.Println("---")
 	for _, location := range locationRes.Results {
@@ -116,18 +123,18 @@ func cmdMap(ca *cmdArg, args []string) error {
 	return nil
 }
 
-func cmdMapB(ca *cmdArg, args []string) error {
+func cmdMapB(args []string, cs *cliState) error {
 	// On first page, api will return empty string for prev
-	if ca.prevLocations == nil || *ca.prevLocations == "" {
+	if cs.prevLocations == nil || *cs.prevLocations == "" {
 		return errors.New("no previous map locations")
 	}
-	locationRes, err := pokeapi.GetLocations(ca.prevLocations, ca.cache)
+	locationRes, err := pokeapi.GetLocations(cs.prevLocations, cs.cache)
 	if err != nil {
 		return errors.New("error getting locations")
 	}
 
-	ca.nextLocations = &locationRes.Next
-	ca.prevLocations = &locationRes.Previous
+	cs.nextLocations = &locationRes.Next
+	cs.prevLocations = &locationRes.Previous
 
 	fmt.Println("---")
 	for _, location := range locationRes.Results {
@@ -138,13 +145,13 @@ func cmdMapB(ca *cmdArg, args []string) error {
 	return nil
 }
 
-func cmdExplore(ca *cmdArg, args []string) error {
+func cmdExplore(args []string, cs *cliState) error {
 	if len(args) == 0 {
 		return errors.New("missing location to explore")
 	}
 
 	fmt.Printf("Exploring %v...\n", args[0])
-	lDRes, err := pokeapi.GetLocationDetail(args[0], ca.cache)
+	lDRes, err := pokeapi.GetLocationDetail(args[0], cs.cache)
 	if err != nil {
 		return err
 	}
@@ -153,6 +160,34 @@ func cmdExplore(ca *cmdArg, args []string) error {
 	for _, pokemonEncounter := range lDRes.PokemonEncounters {
 		fmt.Printf("- %v\n", pokemonEncounter.Pokemon.Name)
 	}
+	fmt.Println("---")
+
+	return nil
+}
+
+func cmdCatch(args []string, cs *cliState) error {
+	if len(args) == 0 {
+		return errors.New("missing pokemon name to catch")
+	}
+	pokemonName := args[0]
+	pokemon, err := pokeapi.GetPokemonData(pokemonName, cs.cache)
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("Throwing a Pokeball at %s...\n", pokemonName)
+
+	caught, err := pokeapi.CatchPokemon(pokemon, cs.pokedex)
+	if err != nil {
+		return err
+	}
+
+	if caught {
+		fmt.Printf("%s was caught!\n", pokemonName)
+	} else {
+		fmt.Printf("%s escaped!\n", pokemonName)
+	}
+	fmt.Println("---")
 
 	return nil
 }
