@@ -6,55 +6,57 @@ import (
 )
 
 type Cache struct {
-	CacheMap map[string]cacheEntry
+	cacheMap map[string]cacheEntry
 	mu       *sync.Mutex
 }
 
 type cacheEntry struct {
-	CreatedAt time.Time
-	Val       []byte
+	createdAt time.Time
+	val       []byte
 }
 
-func NewCache(duration time.Duration) Cache {
+func NewCache(interval time.Duration) Cache {
 	cache := Cache{
-		CacheMap: make(map[string]cacheEntry),
+		cacheMap: make(map[string]cacheEntry),
 		mu:       &sync.Mutex{},
 	}
-	go cache.reapLoop(duration)
+	go cache.reapLoop(interval)
 	return cache
 }
 
-func (c Cache) Add(url string, resBody []byte) error {
+func (c Cache) Add(url string, resBody []byte) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	c.CacheMap[url] = cacheEntry{
-		CreatedAt: time.Now(),
-		Val:       resBody,
+	c.cacheMap[url] = cacheEntry{
+		createdAt: time.Now(),
+		val:       resBody,
 	}
-	return nil
 }
 
-func (c Cache) Get(url string) ([]byte, error) {
+func (c Cache) Get(url string) ([]byte, bool) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	if cEntry, ok := c.CacheMap[url]; ok {
-		return cEntry.Val, nil
-	}
-
-	return []byte{}, nil
+	cEntry, ok := c.cacheMap[url]
+	return cEntry.val, ok
 }
 
-func (c Cache) reapLoop(duration time.Duration) {
-	ticker := time.NewTicker(duration)
+func (c Cache) reapLoop(interval time.Duration) {
+	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 
 	for range ticker.C {
-		for key, cEntry := range c.CacheMap {
-			if time.Since(cEntry.CreatedAt) > duration {
-				delete(c.CacheMap, key)
-			}
+		c.reap(interval)
+	}
+}
+
+func (c Cache) reap(interval time.Duration) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	for key, cEntry := range c.cacheMap {
+		if time.Since(cEntry.createdAt) > interval {
+			delete(c.cacheMap, key)
 		}
 	}
 }

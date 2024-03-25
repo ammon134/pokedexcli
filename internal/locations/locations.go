@@ -38,9 +38,9 @@ func GetLocations(url *string, cache pokecache.Cache) (*LocationResult, error) {
 		getURL = *url
 	}
 
-	if cacheEntry, ok := cache.CacheMap[getURL]; ok {
+	if cacheVal, ok := cache.Get(*url); ok {
 		// fmt.Println("cache hit")
-		err := json.Unmarshal(cacheEntry.Val, locationRes)
+		err := json.Unmarshal(cacheVal, locationRes)
 		if err != nil {
 			return locationRes, err
 		}
@@ -61,10 +61,7 @@ func GetLocations(url *string, cache pokecache.Cache) (*LocationResult, error) {
 		return locationRes, err
 	}
 
-	err = cache.Add(getURL, body)
-	if err != nil {
-		return locationRes, err
-	}
+	cache.Add(getURL, body)
 
 	err = json.Unmarshal(body, locationRes)
 	if err != nil {
