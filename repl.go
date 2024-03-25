@@ -7,7 +7,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/ammon134/pokedexcli/internal/locations"
+	"github.com/ammon134/pokedexcli/internal/pokeapi"
 	"github.com/ammon134/pokedexcli/internal/pokecache"
 )
 
@@ -18,7 +18,7 @@ type cmdArg struct {
 }
 
 type cliCommand struct {
-	callback    func(ca *cmdArg) error
+	callback    func(ca *cmdArg, args []string) error
 	name        string
 	description string
 }
@@ -44,8 +44,9 @@ func startRepl(ca *cmdArg) {
 			fmt.Println("not a command")
 			continue
 		}
+		args := command_list[1:]
 
-		err := command.callback(ca)
+		err := command.callback(ca, args)
 		if err != nil {
 			fmt.Printf("%v\n", err)
 		}
@@ -74,10 +75,15 @@ func getCommands() map[string]cliCommand {
 			description: "Display the previous 20 locations.",
 			callback:    cmdMapB,
 		},
+		"explore": {
+			name:        "explore",
+			description: "Show the pokemon in the provided location.",
+			callback:    cmdExplore,
+		},
 	}
 }
 
-func cmdHelp(ca *cmdArg) error {
+func cmdHelp(ca *cmdArg, args []string) error {
 	fmt.Println("Welcome to the Pokedex CLI!")
 	fmt.Println("Usage: ")
 	fmt.Println()
@@ -87,13 +93,13 @@ func cmdHelp(ca *cmdArg) error {
 	return nil
 }
 
-func cmdExit(ca *cmdArg) error {
+func cmdExit(ca *cmdArg, args []string) error {
 	os.Exit(0)
 	return nil
 }
 
-func cmdMap(ca *cmdArg) error {
-	locationRes, err := locations.GetLocations(ca.nextLocations, ca.cache)
+func cmdMap(ca *cmdArg, args []string) error {
+	locationRes, err := pokeapi.GetLocations(ca.nextLocations, ca.cache)
 	if err != nil {
 		return errors.New("error getting locations")
 	}
@@ -110,12 +116,12 @@ func cmdMap(ca *cmdArg) error {
 	return nil
 }
 
-func cmdMapB(ca *cmdArg) error {
+func cmdMapB(ca *cmdArg, args []string) error {
 	// On first page, api will return empty string for prev
 	if ca.prevLocations == nil || *ca.prevLocations == "" {
 		return errors.New("no previous map locations")
 	}
-	locationRes, err := locations.GetLocations(ca.prevLocations, ca.cache)
+	locationRes, err := pokeapi.GetLocations(ca.prevLocations, ca.cache)
 	if err != nil {
 		return errors.New("error getting locations")
 	}
@@ -128,6 +134,25 @@ func cmdMapB(ca *cmdArg) error {
 		fmt.Printf("%s\n", location.Name)
 	}
 	fmt.Println("---")
+
+	return nil
+}
+
+func cmdExplore(ca *cmdArg, args []string) error {
+	if len(args) == 0 {
+		return errors.New("missing location to explore")
+	}
+
+	fmt.Printf("Exploring %v...\n", args[0])
+	lDRes, err := pokeapi.GetLocationDetail(args[0], ca.cache)
+	if err != nil {
+		return err
+	}
+
+	fmt.Println("Found Pokemon:")
+	for _, pokemonEncounter := range lDRes.PokemonEncounters {
+		fmt.Printf("- %v\n", pokemonEncounter.Pokemon.Name)
+	}
 
 	return nil
 }
