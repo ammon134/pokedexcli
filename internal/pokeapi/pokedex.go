@@ -15,3 +15,11 @@ func (pd Pokedex) Add(pokemonData Pokemon) {
 
 	pd.pokedex[pokemonData.Name] = pokemonData
 }
+
+func (pd Pokedex) Get(pokemonName string) (Pokemon, bool) {
+	pd.mu.Lock()
+	defer pd.mu.Unlock()
+
+	pokemonData, ok := pd.pokedex[pokemonName]
+	return pokemonData, ok
+}

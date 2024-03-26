@@ -87,6 +87,11 @@ func getCommands() map[string]cliCommand {
 			description: "Attempt to catch the pokemon with provided name.",
 			callback:    cmdCatch,
 		},
+		"inspect": {
+			name:        "inspect",
+			description: "View details of caught pokemons",
+			callback:    cmdInspect,
+		},
 	}
 }
 
@@ -167,7 +172,7 @@ func cmdExplore(args []string, cs *cliState) error {
 
 func cmdCatch(args []string, cs *cliState) error {
 	if len(args) == 0 {
-		return errors.New("missing pokemon name to catch")
+		return errors.New("please provide pokemon name")
 	}
 	pokemonName := args[0]
 	pokemon, err := pokeapi.GetPokemonData(pokemonName, cs.cache)
@@ -186,6 +191,32 @@ func cmdCatch(args []string, cs *cliState) error {
 		fmt.Printf("%s was caught!\n", pokemonName)
 	} else {
 		fmt.Printf("%s escaped!\n", pokemonName)
+	}
+	fmt.Println("---")
+
+	return nil
+}
+
+func cmdInspect(args []string, cs *cliState) error {
+	if len(args) == 0 {
+		return errors.New("please provide pokemon name")
+	}
+	pokemonName := args[0]
+	pokemon, ok := cs.pokedex.Get(pokemonName)
+	if !ok {
+		return errors.New("you have not caught that pokemon")
+	}
+
+	fmt.Printf("Name: %s\n", pokemon.Name)
+	fmt.Printf("Height: %d\n", pokemon.Height)
+	fmt.Printf("Weight: %d\n", pokemon.Weight)
+	fmt.Print("Stats:\n")
+	for _, stat := range pokemon.Stats {
+		fmt.Printf("  -%s: %d\n", stat.Stat.Name, stat.BaseStat)
+	}
+	fmt.Print("Types:\n")
+	for _, ptype := range pokemon.Types {
+		fmt.Printf("  - %s\n", ptype.Type.Name)
 	}
 	fmt.Println("---")
 
