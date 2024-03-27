@@ -23,3 +23,14 @@ func (pd Pokedex) Get(pokemonName string) (Pokemon, bool) {
 	pokemonData, ok := pd.pokedex[pokemonName]
 	return pokemonData, ok
 }
+
+func (pd Pokedex) List() []Pokemon {
+	pd.mu.Lock()
+	defer pd.mu.Unlock()
+
+	pokemonList := []Pokemon{}
+	for _, pokemon := range pd.pokedex {
+		pokemonList = append(pokemonList, pokemon)
+	}
+	return pokemonList
+}
